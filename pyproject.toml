@@ -1,0 +1,85 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "project"
+readme = "README.md"
+requires-python = ">=3.12"
+
+dependencies = [
+    "aiomisc>=18.0.24",
+    "alembic>=1.18.4",
+    "asgiref>=3.11.1",
+    "asyncpg>=0.30.0",
+    "dishka>=1.10.1",
+    "fastapi>=0.136.3",
+    "pydantic>=2.13.4",
+    "python-dotenv>=1.2.2",
+    "sqlalchemy>=2.0.50",
+    "uvicorn>=0.49.0",
+]
+[dependency-groups]
+test = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "httpx>=0.28.0",
+]
+dev = [
+    "ruff>=0.15.15",
+    "mypy>=1.13.0",
+    { include-group = "test" },
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["src"]
+extend-exclude = ["src/infrastructure/database/migrations/versions"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+    "TID", # flake8-tidy-imports
+]
+ignore = [
+    "B008", # function call in default arg — common FastAPI/dishka pattern
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]              # re-exports
+"src/infrastructure/database/migrations/*" = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.12"
+# Imports in this project are rooted at `src/`.
+mypy_path = ["src"]
+explicit_package_bases = true
+namespace_packages = true
+ignore_missing_imports = true
+check_untyped_defs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_unused_configs = true
+# `src/__main__.py` is reachable both as `__main__` (base = src, the import root
+# used at runtime) and as `src.__main__` (base = repo root, for `python -m src`),
+# which mypy reports as a duplicate module. It is only the 3-line entrypoint, so
+# exclude it from type checking.
+exclude = ["migrations/versions/", "src/__main__\\.py$"]
+
+[tool.pytest.ini_options]
+# Mirror the runtime import roots so tests can import the app.
+pythonpath = [".", "src"]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-ra --strict-markers"
