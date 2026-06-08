@@ -15,10 +15,6 @@
 | Менеджер пакетов | [uv](https://docs.astral.sh/uv/) |
 | Качество | ruff (lint + format), mypy, pytest |
 
-> Краткий разбор известных шероховатостей и долгов лежит в
-> [`ARCHITECTURE_REVIEW.md`](./ARCHITECTURE_REVIEW.md). README описывает то,
-> **как задумано**; review — то, что ещё предстоит доделать.
-
 ---
 
 ## Содержание
