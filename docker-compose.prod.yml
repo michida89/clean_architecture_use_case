@@ -5,11 +5,19 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
-      ...
+      APP_HOST: 0.0.0.0
+      APP_PORT: "8000"
+      APP_DEBUG: "false"
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DATABASE: ${POSTGRES_DATABASE:-postgres}
     ports:
       - "8000:8000"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
   postgres:
     image: postgres:16-alpine
