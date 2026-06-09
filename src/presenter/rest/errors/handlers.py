@@ -42,9 +42,7 @@ def _code_for_status(status_code: int) -> ErrorCode:
     return _HTTP_STATUS_TO_CODE.get(status_code, ErrorCode.BAD_REQUEST)
 
 
-async def http_exception_handler(
-    request: Request, exc: StarletteHTTPException
-) -> JSONResponse:
+async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
     logger.info(
         f"Стандартная HTTP ошибка {exc.status_code} на "
         f"{request.method} {request.url.path}: {exc.detail}"

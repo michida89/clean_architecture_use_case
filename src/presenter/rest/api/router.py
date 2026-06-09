@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
+from presenter.rest.api.healcheck.check import router as healthcheck_router
 from presenter.rest.api.v1.router import router as v1_router
-from presenter.rest.api.healcheck.check import router as healthcheck_router 
 
 router = APIRouter(prefix="/api")
 

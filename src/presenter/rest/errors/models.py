@@ -1,5 +1,5 @@
-from typing import Any
 from dataclasses import dataclass, fields, is_dataclass
+from typing import Any
 
 from domain.errors.codes import ErrorCode
 from domain.utils.sentinel import Unset, unset

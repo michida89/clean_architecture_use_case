@@ -1,7 +1,6 @@
-from types import TracebackType
-from typing import Protocol
-from domain.uow import AbstractUow
 from sqlalchemy.ext.asyncio import AsyncSession, AsyncSessionTransaction
+
+from domain.uow import AbstractUow
 
 
 class SqlalchemyUow(AbstractUow):

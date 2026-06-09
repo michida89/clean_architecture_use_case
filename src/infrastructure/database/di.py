@@ -24,9 +24,7 @@ class DatabaseProvider(Provider):
         await factory.dispose()
 
     @provide(scope=Scope.APP)
-    def get_session_factory(
-        self, factory: DatabaseFactory
-    ) -> async_sessionmaker[AsyncSession]:
+    def get_session_factory(self, factory: DatabaseFactory) -> async_sessionmaker[AsyncSession]:
         return factory.create_session_factory()
 
     @provide(scope=Scope.REQUEST)
@@ -41,7 +39,5 @@ class DatabaseProvider(Provider):
         return SqlalchemyUow(session)
 
     @provide(scope=Scope.REQUEST)
-    def get_healthcheck_repository(
-        self, session: AsyncSession
-    ) -> IHealthCheckRepository:
+    def get_healthcheck_repository(self, session: AsyncSession) -> IHealthCheckRepository:
         return HealthCheckRepository(session)
