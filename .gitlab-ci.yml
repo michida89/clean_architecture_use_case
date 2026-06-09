@@ -1,0 +1,154 @@
+include:
+  - project: 'proke/pipeline-templates'
+    ref: main
+    file:
+      - '/gitlab-ci-build-and-publish.yml'
+      - '/gitlab-ci-scanning.yml'
+      - '/gitlab-ci-deploy.yml'
+
+stages:
+  - report_prepare
+  - lint
+  - test
+  - pre_build
+  - build
+  - post_build
+  - publish_image
+  - deploy
+  - report
+
+variables:
+  IMAGE_TAG: ${CI_COMMIT_SHORT_SHA}-${CI_PIPELINE_ID}
+  UV_CACHE_DIR: $CI_PROJECT_DIR/.cache/uv
+  UV_PROJECT_ENVIRONMENT: $CI_PROJECT_DIR/.venv
+
+.test_rules:
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'dev' || $CI_COMMIT_BRANCH == 'master'
+      allow_failure: true
+      when: manual
+    - if: $CI_MERGE_REQUEST_ID
+      allow_failure: true
+      when: on_success
+
+.security_rules_template:
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'master'
+    - if: $CI_COMMIT_BRANCH == 'release'
+    - if: $CI_COMMIT_BRANCH == 'dev'
+
+.cache:
+  cache:
+    paths:
+      - .cache/uv
+      - .venv/
+
+.uv_setup:
+  image: python:3.12
+  before_script:
+    - pip install --no-cache-dir uv
+    - make develop
+
+lint:
+  stage: lint
+  interruptible: true
+  extends:
+    - .test_rules
+    - .uv_setup
+    - .cache
+  script:
+    - make lint-ci
+
+test:
+  stage: test
+  interruptible: true
+  extends:
+    - .test_rules
+    - .uv_setup
+    - .cache
+  services:
+    - name: postgres:16
+      alias: db
+  variables:
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: postgres
+    POSTGRES_DB: postgres
+    POSTGRES_HOST: db
+    POSTGRES_PORT: "5432"
+    POSTGRES_DATABASE: postgres
+  script:
+    - make test-ci
+  coverage: /TOTAL.*\s+(\d+%)$/
+  artifacts:
+    expire_in: 1 week
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+      junit: junit.xml
+
+build:
+  stage: build
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'dev'
+    - if: $CI_COMMIT_BRANCH == 'release'
+    - if: $CI_COMMIT_BRANCH == 'master'
+  image: gcr.io/kaniko-project/executor:debug
+  before_script:
+    - |
+      PROJECT="${CI_PROJECT_PATH#*/*/*/}"
+  script:
+    - mkdir -p /kaniko/.docker
+    - echo "{\"auths\":{\"${TEMPORARY_REGISTRY}\":{\"username\":\"${TEMPORARY_REGISTRY_USERNAME}\",\"password\":\"${TEMPORARY_REGISTRY_PASSWORD}\"}}}" > /kaniko/.docker/config.json
+    - >
+      /kaniko/executor
+      --cache=true
+      --snapshot-mode=redo
+      --cache-repo="${TEMPORARY_REGISTRY}/long-lived/${PROJECT}"
+      --use-new-run
+      --context ${CI_PROJECT_DIR}
+      --dockerfile "${CI_PROJECT_DIR}/Dockerfile"
+      --destination "${TEMPORARY_REGISTRY}/short-lived/${PROJECT}:${IMAGE_TAG}"
+
+publish_image_in_docker_registry:
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'release'
+    - if: $CI_COMMIT_BRANCH == 'dev'
+
+publish_image_in_prod_docker_registry:
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'master'
+
+Deploy to Dev:
+  stage: deploy
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'dev'
+      variables:
+        SERVICE: web-backend-dev
+        ARGOCD_SERVER: ${DEV_ARGOCD_SERVER}
+        ARGOCD_USERNAME: ${DEV_ARGOCD_USERNAME}
+        ARGOCD_PASSWORD: ${DEV_ARGOCD_PASSWORD}
+  extends: .k8s_directive
+
+Deploy to Pre Prod:
+  stage: deploy
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'release'
+      variables:
+        SERVICE: web-backend-pre-prod
+        ARGOCD_SERVER: ${PRE_PROD_ARGOCD_SERVER}
+        ARGOCD_USERNAME: ${PRE_PROD_ARGOCD_USERNAME}
+        ARGOCD_PASSWORD: ${PRE_PROD_ARGOCD_PASSWORD}
+  extends: .k8s_directive
+
+Deploy to Prod:
+  stage: deploy
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'master'
+      variables:
+        SERVICE: web-backend-prod
+        ARGOCD_SERVER: ${PROD_ARGOCD_SERVER}
+        ARGOCD_USERNAME: ${PROD_ARGOCD_USERNAME}
+        ARGOCD_PASSWORD: ${PROD_ARGOCD_PASSWORD}
+  extends:
+    - .k8s_directive
