@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from config import config as app_config
 from infrastructure.database.base import BaseORModel
-from infrastructure.database.factory import build_database_url
+from infrastructure.database.factory import DatabaseFactory
 
 config = context.config
 
@@ -18,7 +18,7 @@ if config.config_file_name is not None:
 # Point alembic at the app's DatabaseConfig instead of the alembic.ini placeholder.
 config.set_main_option(
     "sqlalchemy.url",
-    build_database_url(app_config.database).render_as_string(hide_password=False),
+    DatabaseFactory(app_config.database).build_database_url().render_as_string(hide_password=False),
 )
 
 # Import the ORM models so every table is registered on the metadata before autogenerate.

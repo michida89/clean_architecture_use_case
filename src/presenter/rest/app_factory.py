@@ -1,3 +1,7 @@
+import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from aiomisc.service.uvicorn import UvicornService
 from dishka import make_async_container
 from dishka.integrations.fastapi import setup_dishka
@@ -5,9 +9,17 @@ from fastapi import APIRouter, FastAPI
 
 from common.use_case.di import UseCaseProvider
 from config import Config
-from presenter.rest.errors.handlers import HANDLERS_MAP
 from infrastructure.database.di import DatabaseProvider
+from presenter.rest.errors.handlers import HANDLERS_MAP
 from presenter.rest.middleware import include_cors_middleware
+
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
+    yield
+    await app.state.dishka_container.close()
 
 
 class ApplicationFactory(UvicornService):
@@ -21,6 +33,11 @@ class ApplicationFactory(UvicornService):
         )
 
     async def create_application(self) -> FastAPI:
+        logger.info(
+            "Starting %s v%s",
+            self.config.application.APP_TITLE,
+            self.config.application.APP_VERSION,
+        )
         app = FastAPI(
             description=self.config.application.APP_DESCRIPTION,
             version=self.config.application.APP_VERSION,
@@ -28,6 +45,7 @@ class ApplicationFactory(UvicornService):
             docs_url=self.config.application.APP_DOCS_URL,
             redoc_url=self.config.application.APP_REDOC_URL,
             debug=self.config.application.APP_DEBUG,
+            lifespan=_lifespan,
         )
 
         self._include_router(app=app)
@@ -35,6 +53,11 @@ class ApplicationFactory(UvicornService):
         self._include_exception_handlers(app=app)
         self._setup_di(app=app)
 
+        logger.info(
+            "Application listening on %s:%s",
+            self.config.application.APP_HOST,
+            self.config.application.APP_PORT,
+        )
         return app
 
     def _setup_di(self, app: FastAPI) -> None:

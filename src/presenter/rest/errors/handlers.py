@@ -3,10 +3,9 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from fastapi import Request
-from fastapi.exceptions import RequestValidationError
+from fastapi.exceptions import RequestValidationError, StarletteHTTPException
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError as PydanticValidationError
-from fastapi.exceptions import HTTPException as FastApiHTTPException
 
 from domain.errors.codes import ErrorCode
 from domain.errors.exceptions import AppException
@@ -32,6 +31,7 @@ _HTTP_STATUS_TO_CODE = {
     401: ErrorCode.UNAUTHORIZED,
     403: ErrorCode.FORBIDDEN,
     404: ErrorCode.NOT_FOUND,
+    405: ErrorCode.METHOD_NOT_ALLOWED,
     422: ErrorCode.VALIDATION_ERROR,
 }
 
@@ -42,8 +42,8 @@ def _code_for_status(status_code: int) -> ErrorCode:
     return _HTTP_STATUS_TO_CODE.get(status_code, ErrorCode.BAD_REQUEST)
 
 
-async def fastapi_http_exception_handler(
-    request: Request, exc: FastApiHTTPException
+async def http_exception_handler(
+    request: Request, exc: StarletteHTTPException
 ) -> JSONResponse:
     logger.info(
         f"Стандартная HTTP ошибка {exc.status_code} на "
@@ -104,7 +104,7 @@ ExceptionHandler = Callable[[Request, Any], Awaitable[JSONResponse]]
 
 HANDLERS_MAP: tuple[tuple[type[Exception], ExceptionHandler], ...] = (
     (AppException, app_exception_handler),
-    (FastApiHTTPException, fastapi_http_exception_handler),
+    (StarletteHTTPException, http_exception_handler),
     (RequestValidationError, request_validation_exception_handler),
     (PydanticValidationError, internal_validation_exception_handler),
     (Exception, unknown_exception_handler),

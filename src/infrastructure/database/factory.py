@@ -1,3 +1,5 @@
+import logging
+
 from sqlalchemy.engine import URL
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -7,6 +9,8 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from infrastructure.database.config import DatabaseConfig
+
+logger = logging.getLogger(__name__)
 
 
 class DatabaseFactory:
@@ -27,6 +31,12 @@ class DatabaseFactory:
 
     def create_engine(self) -> AsyncEngine:
         if self._engine is None:
+            logger.info(
+                "Creating database engine for %s:%s/%s",
+                self._config.POSTGRES_HOST,
+                self._config.POSTGRES_PORT,
+                self._config.POSTGRES_DATABASE,
+            )
             self._engine = create_async_engine(
                 url=self.build_database_url(),
                 echo=False,
@@ -57,5 +67,6 @@ class DatabaseFactory:
 
     async def dispose(self) -> None:
         if self._engine is not None:
+            logger.info("Disposing database engine")
             await self._engine.dispose()
             self._engine = None
