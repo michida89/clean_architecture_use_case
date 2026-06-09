@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from config import config as app_config
 from infrastructure.database.base import BaseORModel
-from src.infrastructure.database.factory import build_database_url
+from infrastructure.database.factory import build_database_url
 
 config = context.config
 
