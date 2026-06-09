@@ -1,7 +1,6 @@
 from typing import Any
 
 from domain.errors.codes import ErrorCode
-from domain.errors.models import ErrorDetailModel, ErrorResponseModel
 
 
 class AppException(Exception):
@@ -12,7 +11,4 @@ class AppException(Exception):
     def __init__(self, message: str | None = None, extra: dict[str, Any] | None = None):
         self.message = message or self.message
         self.extra = extra or {}
-
-        self.response_data = ErrorResponseModel(
-            error=ErrorDetailModel(code=self.error_code, message=self.message, extra=self.extra)
-        )
+        super().__init__(self.message)

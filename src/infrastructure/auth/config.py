@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from domain.services.env import get_int_value, get_str_value
+from common.services.env import get_int_value, get_str_value
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)

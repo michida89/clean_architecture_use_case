@@ -1,7 +1,7 @@
 import os
 from collections.abc import Callable
 
-from domain.services.sentinel import Unset, unset
+from domain.utils.sentinel import Unset, unset
 
 
 class MissingEnvVar(Exception):

@@ -8,3 +8,4 @@ class ErrorCode(StrEnum):
     BAD_REQUEST = "bad_request"
     UNAUTHORIZED = "unauthorized"
     FORBIDDEN = "forbidden"
+    UNKNOWN_ERROR = "unknown_error"

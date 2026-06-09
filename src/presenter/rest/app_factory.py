@@ -5,7 +5,7 @@ from fastapi import APIRouter, FastAPI
 
 from common.use_case.di import UseCaseProvider
 from config import Config
-from domain.errors.handlers import HANDLERS_MAP
+from presenter.rest.errors.handlers import HANDLERS_MAP
 from infrastructure.database.di import DatabaseProvider
 from presenter.rest.middleware import include_cors_middleware
 

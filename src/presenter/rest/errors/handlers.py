@@ -6,11 +6,12 @@ from fastapi import Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError as PydanticValidationError
-from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.exceptions import HTTPException as FastApiHTTPException
 
 from domain.errors.codes import ErrorCode
 from domain.errors.exceptions import AppException
-from domain.errors.models import ErrorDetailModel, ErrorResponseModel
+from domain.utils.sentinel import unset
+from presenter.rest.errors.models import ErrorDetail, ErrorResponse
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +20,11 @@ async def app_exception_handler(request: Request, exc: AppException) -> JSONResp
     logger.warning(
         f"Бизнес-ошибка [{exc.error_code}] на {request.method} {request.url.path}: {exc.message}"
     )
-    return JSONResponse(status_code=exc.status_code, content=exc.response_data.model_dump())
+    response = ErrorResponse(
+        message=exc.error_code,
+        error=ErrorDetail(message=exc.message, extra=exc.extra or unset),
+    )
+    return JSONResponse(status_code=exc.status_code, content=response.to_dict())
 
 
 _HTTP_STATUS_TO_CODE = {
@@ -38,15 +43,15 @@ def _code_for_status(status_code: int) -> ErrorCode:
 
 
 async def fastapi_http_exception_handler(
-    request: Request, exc: StarletteHTTPException
+    request: Request, exc: FastApiHTTPException
 ) -> JSONResponse:
     logger.info(
         f"Стандартная HTTP ошибка {exc.status_code} на "
         f"{request.method} {request.url.path}: {exc.detail}"
     )
     code = _code_for_status(exc.status_code)
-    response = ErrorResponseModel(error=ErrorDetailModel(code=code, message=str(exc.detail)))
-    return JSONResponse(status_code=exc.status_code, content=response.model_dump())
+    response = ErrorResponse(message=code, error=ErrorDetail(message=str(exc.detail)))
+    return JSONResponse(status_code=exc.status_code, content=response.to_dict())
 
 
 async def request_validation_exception_handler(
@@ -57,14 +62,14 @@ async def request_validation_exception_handler(
         {"field": ".".join(str(x) for x in err["loc"] if x != "body"), "msg": err["msg"]}
         for err in exc.errors()
     ]
-    response = ErrorResponseModel(
-        error=ErrorDetailModel(
-            code=ErrorCode.VALIDATION_ERROR,
+    response = ErrorResponse(
+        message=ErrorCode.VALIDATION_ERROR,
+        error=ErrorDetail(
             message="Ошибка валидации входящих данных",
             extra={"details": errors},
-        )
+        ),
     )
-    return JSONResponse(status_code=422, content=response.model_dump())
+    return JSONResponse(status_code=422, content=response.to_dict())
 
 
 async def internal_validation_exception_handler(
@@ -76,32 +81,30 @@ async def internal_validation_exception_handler(
     errors = [
         {"field": ".".join(str(x) for x in err["loc"]), "msg": err["msg"]} for err in exc.errors()
     ]
-    response = ErrorResponseModel(
-        error=ErrorDetailModel(
-            code=ErrorCode.INTERNAL_SERVER_ERROR,
+    response = ErrorResponse(
+        message=ErrorCode.INTERNAL_SERVER_ERROR,
+        error=ErrorDetail(
             message="Внутренняя ошибка сервера при обработке данных",
-            extra={"details": errors} if logger.isEnabledFor(logging.DEBUG) else None,
-        )
+            extra={"details": errors} if logger.isEnabledFor(logging.DEBUG) else unset,
+        ),
     )
-    return JSONResponse(status_code=500, content=response.model_dump())
+    return JSONResponse(status_code=500, content=response.to_dict())
 
 
 async def unknown_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     logger.exception(f"Критическая ошибка (500) на {request.method} {request.url.path}: {exc}")
-    response = ErrorResponseModel(
-        error=ErrorDetailModel(
-            code=ErrorCode.INTERNAL_SERVER_ERROR, message="Внутренняя ошибка сервера"
-        )
+    response = ErrorResponse(
+        message=ErrorCode.INTERNAL_SERVER_ERROR,
+        error=ErrorDetail(message="Внутренняя ошибка сервера"),
     )
-    return JSONResponse(status_code=500, content=response.model_dump())
+    return JSONResponse(status_code=500, content=response.to_dict())
 
 
-# `Any` for exc: each handler narrows it to its own type (Callable params are contravariant).
 ExceptionHandler = Callable[[Request, Any], Awaitable[JSONResponse]]
 
 HANDLERS_MAP: tuple[tuple[type[Exception], ExceptionHandler], ...] = (
     (AppException, app_exception_handler),
-    (StarletteHTTPException, fastapi_http_exception_handler),
+    (FastApiHTTPException, fastapi_http_exception_handler),
     (RequestValidationError, request_validation_exception_handler),
     (PydanticValidationError, internal_validation_exception_handler),
     (Exception, unknown_exception_handler),
