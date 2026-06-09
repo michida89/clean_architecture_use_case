@@ -16,12 +16,6 @@ from presenter.rest.middleware import include_cors_middleware
 logger = logging.getLogger(__name__)
 
 
-@asynccontextmanager
-async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
-    yield
-    await app.state.dishka_container.close()
-
-
 class ApplicationFactory(UvicornService):
     def __init__(self, config: Config, router: APIRouter, **kwargs) -> None:
         self.config = config
@@ -76,3 +70,9 @@ class ApplicationFactory(UvicornService):
     def _include_exception_handlers(self, app: FastAPI) -> None:
         for exception, handler in HANDLERS_MAP:
             app.add_exception_handler(exception, handler)
+
+
+@asynccontextmanager
+async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
+    yield
+    await app.state.dishka_container.close()
