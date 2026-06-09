@@ -11,7 +11,6 @@
 | БД | PostgreSQL + SQLAlchemy 2.0 (async, `asyncpg`) |
 | Миграции | Alembic |
 | DI | [dishka](https://github.com/reagento/dishka) |
-| Хранилище файлов | MinIO (S3-совместимое) |
 | Менеджер пакетов | [uv](https://docs.astral.sh/uv/) |
 | Качество | ruff (lint + format), mypy, pytest |
 
@@ -227,7 +226,7 @@ async def execute(self, *, input_dto: None) -> bool:
 
 - **Python 3.12** (зафиксирован в `.python-version`)
 - **[uv](https://docs.astral.sh/uv/)** — менеджер пакетов и окружений
-- **Docker** + Docker Compose — для PostgreSQL и MinIO
+- **Docker** + Docker Compose — для PostgreSQL
 
 Установка uv (если ещё нет):
 
@@ -246,7 +245,7 @@ make install
 # 2. Файл окружения из шаблона
 make env                # скопирует .env.example → .env, при наличии не тронет
 
-# 3. Поднять PostgreSQL и MinIO
+# 3. Поднять PostgreSQL
 make up
 
 # 4. Накатить миграции на свежую БД
@@ -262,7 +261,6 @@ make run
 - Swagger UI — http://localhost:8000/docs
 - ReDoc — http://localhost:8000/redoc
 - Проверка живости — http://localhost:8000/api/healthcheck
-- Консоль MinIO — http://localhost:9001
 
 Перед коммитом полезно прогнать:
 
@@ -464,7 +462,7 @@ Alembic берёт URL БД не из плейсхолдера в `alembic.ini`,
 
 | Цель | Что делает |
 |------|------------|
-| `make up` | Поднять стек (PostgreSQL + MinIO) в фоне (`-d`) |
+| `make up` | Поднять стек (PostgreSQL) в фоне (`-d`) |
 | `make down` | Остановить стек |
 | `make build` | Собрать образы |
 | `make logs` | Смотреть логи в реальном времени |
@@ -495,7 +493,6 @@ Alembic берёт URL БД не из плейсхолдера в `alembic.ini`,
 | Приложение | `APP_HOST`, `APP_PORT`, `APP_TITLE`, `APP_DESCRIPTION`, `APP_VERSION`, `APP_DEBUG`, `APP_DOCS_URL`, `APP_REDOC_URL` | хост/порт, метаданные OpenAPI, debug, пути к докам |
 | PostgreSQL | `POSTGRES_DRIVER`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DATABASE` | подключение к БД |
 | JWT | `JWT_ALGORITHM`, `JWT_PRIVATE_KEY_PATH`, `JWT_PUBLIC_KEY_PATH`, `JWT_ACCESS_TOKEN_EXPIRE_MINUTES`, `JWT_REFRESH_TOKEN_EXPIRE_DAYS` | алгоритм и ключи токенов, время жизни |
-| MinIO | `MINIO_HOST`, `MINIO_PORT`, `MINIO_USER`, `MINIO_PASSWORD`, `MINIO_SECURE` | S3-совместимое хранилище |
 
 Значения из `.env` автоматически подхватываются всеми `make`-целями (через
 `uv run --env-file`) и `docker compose`.

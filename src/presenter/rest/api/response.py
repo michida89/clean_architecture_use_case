@@ -1,7 +1,8 @@
-from pydantic import BaseModel
+from dataclasses import dataclass
 
 
-class Response(BaseModel):
-    status: str
-    message: str
-    data: dict | list | None = None
+@dataclass(frozen=True, kw_only=True, slots=True)
+class Response[ReponseModel]:
+    status: str = "data"
+    message: str = "ok"
+    data: ReponseModel | dict | list | None = None
